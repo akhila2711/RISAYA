@@ -1,0 +1,22 @@
+import React, { Component } from "react";
+
+const WithCounter =(OriginalComp)=>{
+  class EnhancedComponent extends React.Component{
+    constructor(props){
+      super(props)
+      this.state={
+        counter:0
+      }
+    }
+    increment=()=>{
+      const {counter}=this.state
+      this.setState({counter:counter+1})
+    }
+    render(){
+      return <OriginalComp increment={this.increment} counter={this.state.counter}></OriginalComp>
+    }
+  }
+  return EnhancedComponent
+}
+
+export default WithCounter;
