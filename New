@@ -1,0 +1,196 @@
+// src/app/store.js
+import { configureStore } from "@reduxjs/toolkit";
+import tasksReducer from "../features/tasks/tasksSlice";
+
+export const store = configureStore({
+  reducer: tasksReducer,
+});
+
+
+// src/features/tasks/tasksSlice.js
+import { createSlice } from "@reduxjs/toolkit";
+
+const tasksSlice = createSlice({
+  name: "tasks",
+  initialState: {
+    boards: {
+      Design: [],
+      Learning: [],
+    },
+    activeBoard: "Design",
+  },
+  reducers: {
+    addBoard: (state, action) => {
+      state.boards[action.payload] = [];
+    },
+    setBoard: (state, action) => {
+      state.activeBoard = action.payload;
+    },
+    addTask: (state, action) => {
+      state.boards[state.activeBoard].push({
+        title: action.payload,
+        status: "Backlog",
+      });
+    },
+    updateTaskStatus: (state, action) => {
+      const { index, status } = action.payload;
+      state.boards[state.activeBoard][index].status = status;
+    },
+  },
+});
+
+export const { addBoard, setBoard, addTask, updateTaskStatus } = tasksSlice.actions;
+export default tasksSlice.reducer;
+
+
+// src/components/Sidebar.js
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { addBoard, setBoard } from "../features/tasks/tasksSlice";
+
+const Sidebar = () => {
+  const dispatch = useDispatch();
+  const boards = useSelector((state) => Object.keys(state.boards));
+  const activeBoard = useSelector((state) => state.activeBoard);
+  const [newBoard, setNewBoard] = useState("");
+
+  return (
+    <div className="p-4 w-64 bg-black text-white">
+      <h2 className="text-xl font-bold mb-4">Boards</h2>
+      {boards.map((board) => (
+        <div
+          key={board}
+          className={`cursor-pointer p-2 rounded ${
+            activeBoard === board ? "bg-purple-600" : "hover:bg-gray-700"
+          }`}
+          onClick={() => dispatch(setBoard(board))}
+        >
+          {board}
+        </div>
+      ))}
+      <input
+        className="mt-4 w-full p-2 text-black"
+        placeholder="New board"
+        value={newBoard}
+        onChange={(e) => setNewBoard(e.target.value)}
+      />
+      <button
+        className="w-full bg-purple-500 mt-2 p-2 rounded"
+        onClick={() => {
+          if (newBoard.trim()) {
+            dispatch(addBoard(newBoard));
+            setNewBoard("");
+          }
+        }}
+      >
+        Add Board
+      </button>
+    </div>
+  );
+};
+
+export default Sidebar;
+
+
+// src/components/TaskCard.js
+import React from "react";
+import { useDispatch } from "react-redux";
+import { updateTaskStatus } from "../features/tasks/tasksSlice";
+
+const TaskCard = ({ task, index }) => {
+  const dispatch = useDispatch();
+
+  return (
+    <div className="bg-gray-800 text-white p-4 rounded mb-2">
+      <p>{task.title}</p>
+      <select
+        className="mt-2 text-black"
+        value={task.status}
+        onChange={(e) =>
+          dispatch(updateTaskStatus({ index, status: e.target.value }))
+        }
+      >
+        <option>Backlog</option>
+        <option>In Progress</option>
+        <option>In Review</option>
+        <option>Completed</option>
+      </select>
+    </div>
+  );
+};
+
+export default TaskCard;
+
+
+// src/components/TaskBoard.js
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { addTask } from "../features/tasks/tasksSlice";
+import TaskCard from "./TaskCard";
+
+const TaskBoard = () => {
+  const tasks = useSelector((state) => state.boards[state.activeBoard] || []);
+  const statuses = ["Backlog", "In Progress", "In Review", "Completed"];
+  const [taskTitle, setTaskTitle] = useState("");
+  const dispatch = useDispatch();
+
+  return (
+    <div className="flex-1 p-4 bg-gray-900 text-white">
+      <h2 className="text-2xl font-bold mb-4">
+        {useSelector((state) => state.activeBoard)} Board
+      </h2>
+      <div className="flex space-x-4">
+        {statuses.map((status) => (
+          <div key={status} className="flex-1">
+            <h3 className="text-lg mb-2">{status}</h3>
+            {tasks.map((task, i) =>
+              task.status === status ? (
+                <TaskCard key={i} task={task} index={i} />
+              ) : null
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-4">
+        <input
+          className="w-full p-2 text-black"
+          placeholder="New task title"
+          value={taskTitle}
+          onChange={(e) => setTaskTitle(e.target.value)}
+        />
+        <button
+          className="bg-green-500 mt-2 p-2 rounded"
+          onClick={() => {
+            if (taskTitle.trim()) {
+              dispatch(addTask(taskTitle));
+              setTaskTitle("");
+            }
+          }}
+        >
+          Add Task
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default TaskBoard;
+
+
+// src/App.js
+import React from "react";
+import Sidebar from "./components/Sidebar";
+import TaskBoard from "./components/TaskBoard";
+import { Provider } from "react-redux";
+import { store } from "./app/store";
+
+const App = () => (
+  <Provider store={store}>
+    <div className="flex h-screen">
+      <Sidebar />
+      <TaskBoard />
+    </div>
+  </Provider>
+);
+
+export default App;
